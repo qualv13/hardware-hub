@@ -1,4 +1,4 @@
-# Hardware Hub 📦
+# Hardware Hub 📦 [Live version](https://hardware-hub-2qc7.onrender.com/login)
 
 An AI-native internal tool for managing, renting and maintaining company
 hardware. Built for the Booksy *AI-Native Hardware Hub* assessment.
@@ -194,6 +194,7 @@ All respect `prefers-reduced-motion`. Credit: effect designs from React Bits (MI
 1. Edit-device flow + device detail/history drawer.
 2. Embedding-based semantic search + result explanations.
 3. Harden auth (cookie sessions, password reset) and lock down CORS.
+4. Improve AI audit and tools usage
 
 ---
 
@@ -231,7 +232,4 @@ All respect `prefers-reduced-motion`. Credit: effect designs from React Bits (MI
 
 ## Deployment
 
-Single-container: build the Vue app, let FastAPI serve it (see `Dockerfile`).
-Set `GEMINI_API_KEY` and `SECRET_KEY` as secrets. Suitable for Render / Fly.io /
-Railway free tiers. ⚠️ SQLite is **ephemeral** on those hosts (re-seeds on each
-cold start) — fine for a demo; use a volume or Postgres for anything real.
+[Live version](https://hardware-hub-2qc7.onrender.com/login)
