@@ -50,7 +50,7 @@ npm run dev                   # http://localhost:5173 (proxies /api -> :8000)
 ### Tests
 ```bash
 cd backend
-pytest                        # 3 critical tests
+pytest                        # 10 tests (incl. the 3 required critical ones)
 ```
 
 ### Default login
@@ -125,7 +125,10 @@ isn't in use, or returning someone else's rental.
   repair"*) and Gemini decides which **tool** to call to fix it. Tools live in
   [`ai/tools.py`](backend/app/ai/tools.py) and cover every fixable flag:
   `set_brand`, `set_purchase_date`, `set_status`, `set_quarantine`, `set_name`,
-  `set_category`, `set_serial_number` — each clears the matching audit flag.
+  `set_category`, `set_serial_number`, `set_assigned_to` — each clears the
+  matching audit flag. A contradictory *"In Use but unassigned"* state can be
+  resolved either by recording a holder (`set_assigned_to`) or releasing the
+  device (`set_status` → Available).
   Every fix is logged to an `AuditAction` history the admin can review (per-row
   and via the *History* panel). Fallback: a deterministic prompt parser routes
   to the same tools so it works with no API key.
@@ -169,8 +172,9 @@ All respect `prefers-reduced-motion`. Credit: effect designs from React Bits (MI
 - Hardware CRUD (admin), sorting & filtering, toggle Repair
 - Rent / Return with state-machine guards
 - Seed audit/migration with report + quarantine
-- Semantic Search + Inventory Auditor (Gemini + fallbacks)
-- 3 critical tests
+- Semantic Search + Inventory Auditor + tool-calling fixes (Gemini + fallbacks)
+- 10 backend tests (incl. the 3 required critical: cannot rent broken / in-use
+  gear, seed audit quarantines & dedupes)
 
 ### ⚡ Shortcuts & "hacks"
 - **JWT stored in `localStorage`.** *Why:* fastest path for an internal MVP.
@@ -195,17 +199,33 @@ All respect `prefers-reduced-motion`. Credit: effect designs from React Bits (MI
 
 ## AI Development Log
 
-> Fill this in as you build — it's graded as heavily as the code.
-
-- **Tooling:** Claude Code (scaffold + tests), Gemini (in-app AI features).
-- **Data strategy:** see *Data Strategy* above — the audit report is the
-  artifact. (AI helped enumerate the seed's edge cases.)
-- **Prompt trail:** [`PROMPTS.md`](PROMPTS.md).
-- **The "Correction":** _describe one moment where the AI produced a buggy /
-  insecure / suboptimal solution and how you caught and fixed it._
-  (Real example from this build: the `passlib`+`bcrypt` combo raised
-  *"password cannot be longer than 72 bytes"* — replaced with direct `bcrypt`
-  and explicit 72-byte truncation.)
+- **Tooling:** **Claude Code** for planning, scaffolding, multi-agent parallel
+  work, debugging and runtime verification; **Google Gemini** (`google-genai`)
+  for the in-app AI features.
+- **Data strategy:** see *Data Strategy* above — the seed audit/migration report
+  is the artifact. AI helped enumerate the seed's edge cases (duplicate ids,
+  future date, DD-MM-YYYY date, brand typo, invalid status, damaged-but-
+  "Available" devices); each got an explicit, reviewable rule rather than a
+  silent rewrite.
+- **Prompt trail:** the full, verbatim history is in [`PROMPTS.md`](PROMPTS.md).
+- **The "Correction":** moments where AI output was wrong and I corrected it
+  (more in [`PROMPTS.md`](PROMPTS.md)):
+  - **Silent LLM fallback — the subtle one.** The tool-calling fixer *looked*
+    healthy (HTTP 200), but every fix was quietly handled by the deterministic
+    fallback, never the LLM. Root cause: `ai/tools.py` called `json.dumps(...)`
+    without importing `json`; the resulting `NameError` was swallowed by a broad
+    `except Exception` in `run_fix`, which fell back — even reporting *"no
+    GEMINI_API_KEY set"* while a key was present. Caught by **verifying the path
+    at runtime** (injecting a fake client) instead of trusting the 200; fixed the
+    missing import, wired up two tools that were defined but never exposed to the
+    model (`set_category`, `set_serial_number`), added `set_assigned_to`, and made
+    the broad `except` **log** so the regression can't hide again.
+  - **`passlib` + modern `bcrypt`** raised *"password cannot be longer than 72
+    bytes"* → replaced with direct `bcrypt` + explicit 72-byte truncation.
+  - **Naive semantic-search fallback** matched short tokens ("app" ⊂ "Apple")
+    and returned laptops/mice for a phone query → rewritten with device-type
+    inference, use-case mapping and stopword filtering.
+  - **Deprecated `google-generativeai`** SDK → migrated to `google-genai`.
 
 ---
 
