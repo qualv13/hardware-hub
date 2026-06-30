@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    container_name: hardware-hub
+    ports:
+      - "8000:8000"
+    environment:
+      # One container serves the built SPA *and* the API on the same origin,
+      # so there is no dev-proxy and no localhost/IPv4-IPv6 communication issues.
+      DATABASE_URL: "sqlite:////data/hardware_hub.db"
+      SECRET_KEY: "${SECRET_KEY:-change-me-in-production}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@booksy.com}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin123}"
+      ALLOWED_EMAIL_DOMAIN: "${ALLOWED_EMAIL_DOMAIN:-booksy.com}"
+      # Optional — set in a .env file next to this compose file to enable the
+      # real Gemini tool-calling (otherwise the deterministic fallbacks run).
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_MODEL: "${GEMINI_MODEL:-gemini-2.5-flash}"
+    volumes:
+      # Persist the SQLite DB outside the image so data survives rebuilds.
+      - hub_data:/data
+    restart: unless-stopped
+
+volumes:
+  hub_data:
