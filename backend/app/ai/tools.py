@@ -8,8 +8,11 @@ fallback parser interprets common instructions so the feature still works.
 """
 
 import json
+import logging
 import re
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from ..models import VALID_STATUSES
 
@@ -191,7 +194,10 @@ def run_fix(hw, prompt: str):
         if result is not None:
             return result
     except Exception:
-        pass
+        # Don't let an LLM/SDK failure break the fix flow — but log it, so a
+        # regression (e.g. a missing import) can't silently masquerade as the
+        # deterministic fallback the way it once did.
+        logger.exception("Gemini fix failed; using deterministic fallback")
     return _fallback_fix(hw, prompt)
 
 
